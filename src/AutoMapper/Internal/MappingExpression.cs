@@ -25,6 +25,7 @@ namespace AutoMapper
 		public void ConvertUsing(Type typeConverterType)
 		{
 			var interfaceType = typeof (ITypeConverter<,>).MakeGenericType(_typeMap.SourceType, _typeMap.DestinationType);
+<<<<<<< HEAD
 			var convertMethodType = interfaceType.IsAssignableFrom(typeConverterType) ? interfaceType : typeConverterType;
 			var converter = new DeferredInstantiatedConverter(convertMethodType, () => _typeConverterCtor(typeConverterType));
 
@@ -36,6 +37,19 @@ namespace AutoMapper
 			_typeMap.Profile = profileName;
 
 			return this;
+=======
+			var convertMethodType = interfaceType.IsAssignableFrom(typeConverterType) ? interfaceType : typeConverterType;
+            var converter = new DeferredInstantiatedConverter(convertMethodType, BuildCtor<object>(typeConverterType));
+
+			_typeMap.UseCustomMapper(converter.Convert);
+		}
+
+		public IMappingExpression WithProfile(string profileName)
+		{
+			_typeMap.Profile = profileName;
+
+			return this;
+>>>>>>> e35550df7a4658b658c1b8fe9116977efbcd0874
 		}
 
         public IMappingExpression ForMember(string name, Action<IMemberConfigurationExpression> memberOptions)
@@ -71,7 +85,7 @@ namespace AutoMapper
 
         public IResolverConfigurationExpression ResolveUsing(Type valueResolverType)
         {
-            var resolver = new DeferredInstantiatedResolver(() => (IValueResolver)_typeConverterCtor(valueResolverType));
+            var resolver = new DeferredInstantiatedResolver(BuildCtor<IValueResolver>(valueResolverType));
 
             ResolveUsing(resolver);
 
@@ -80,7 +94,7 @@ namespace AutoMapper
 
 	    public IResolverConfigurationExpression ResolveUsing<TValueResolver>()
 	    {
-            var resolver = new DeferredInstantiatedResolver(() => (IValueResolver)_typeConverterCtor(typeof(TValueResolver)));
+            var resolver = new DeferredInstantiatedResolver(BuildCtor<IValueResolver>((typeof(TValueResolver))));
 
             ResolveUsing(resolver);
 
@@ -91,6 +105,7 @@ namespace AutoMapper
 	    {
 	        _propertyMap.Ignore();
 	    }
+<<<<<<< HEAD
 	}
 
 	internal class MappingExpression<TSource, TDestination> : IMappingExpression<TSource, TDestination>, IMemberConfigurationExpression<TSource>, IFormatterCtorConfigurator
@@ -203,6 +218,134 @@ namespace AutoMapper
 			return new ResolutionExpression<TSource>(_propertyMap);
 		}
 
+=======
+
+        private Func<ResolutionContext, TServiceType> BuildCtor<TServiceType>(Type type)
+        {
+            return context =>
+            {
+                if (context.Options.ServiceCtor != null)
+                {
+                    var obj = context.Options.ServiceCtor(type);
+                    if (obj != null)
+                        return (TServiceType)obj;
+                }
+                return (TServiceType)_typeConverterCtor(type);
+            };
+        }
+    }
+
+	internal class MappingExpression<TSource, TDestination> : IMappingExpression<TSource, TDestination>, IMemberConfigurationExpression<TSource>, IFormatterCtorConfigurator
+	{
+		private readonly TypeMap _typeMap;
+		private readonly Func<Type, object> _serviceCtor;
+		private PropertyMap _propertyMap;
+
+		public MappingExpression(TypeMap typeMap, Func<Type, object> serviceCtor)
+		{
+			_typeMap = typeMap;
+			_serviceCtor = serviceCtor;
+		}
+
+		public IMappingExpression<TSource, TDestination> ForMember(Expression<Func<TDestination, object>> destinationMember,
+																   Action<IMemberConfigurationExpression<TSource>> memberOptions)
+		{
+		    var memberInfo = ReflectionHelper.FindProperty(destinationMember);
+		    IMemberAccessor destProperty = memberInfo.ToMemberAccessor();
+			ForDestinationMember(destProperty, memberOptions);
+			return new MappingExpression<TSource, TDestination>(_typeMap, _serviceCtor);
+		}
+
+		public IMappingExpression<TSource, TDestination> ForMember(string name,
+																   Action<IMemberConfigurationExpression<TSource>> memberOptions)
+		{
+			IMemberAccessor destProperty = new PropertyAccessor(typeof(TDestination).GetProperty(name));
+			ForDestinationMember(destProperty, memberOptions);
+			return new MappingExpression<TSource, TDestination>(_typeMap, _serviceCtor);
+		}
+
+		public void ForAllMembers(Action<IMemberConfigurationExpression<TSource>> memberOptions)
+		{
+		    var typeInfo = new TypeInfo(_typeMap.DestinationType);
+
+		    typeInfo.GetPublicWriteAccessors().Each(acc => ForDestinationMember(acc.ToMemberAccessor(), memberOptions));
+		}
+
+		public IMappingExpression<TSource, TDestination> Include<TOtherSource, TOtherDestination>()
+			where TOtherSource : TSource
+			where TOtherDestination : TDestination
+		{
+			_typeMap.IncludeDerivedTypes(typeof(TOtherSource), typeof(TOtherDestination));
+
+			return this;
+		}
+
+		public IMappingExpression<TSource, TDestination> WithProfile(string profileName)
+		{
+			_typeMap.Profile = profileName;
+
+			return this;
+		}
+
+		public void SkipFormatter<TValueFormatter>() where TValueFormatter : IValueFormatter
+		{
+			_propertyMap.AddFormatterToSkip<TValueFormatter>();
+		}
+
+		public IFormatterCtorExpression<TValueFormatter> AddFormatter<TValueFormatter>() where TValueFormatter : IValueFormatter
+		{
+			var formatter = new DeferredInstantiatedFormatter(BuildCtor<IValueFormatter>(typeof(TValueFormatter)));
+
+			AddFormatter(formatter);
+
+			return new FormatterCtorExpression<TValueFormatter>(this);
+		}
+
+		public IFormatterCtorExpression AddFormatter(Type valueFormatterType)
+		{
+			var formatter = new DeferredInstantiatedFormatter(BuildCtor<IValueFormatter>(valueFormatterType));
+
+			AddFormatter(formatter);
+
+			return new FormatterCtorExpression(valueFormatterType, this);
+		}
+
+		public void AddFormatter(IValueFormatter formatter)
+		{
+			_propertyMap.AddFormatter(formatter);
+		}
+
+		public void NullSubstitute(object nullSubstitute)
+		{
+			_propertyMap.SetNullSubstitute(nullSubstitute);
+		}
+
+		public IResolverConfigurationExpression<TSource, TValueResolver> ResolveUsing<TValueResolver>() where TValueResolver : IValueResolver
+		{
+			var resolver = new DeferredInstantiatedResolver(BuildCtor<IValueResolver>(typeof(TValueResolver)));
+
+			ResolveUsing(resolver);
+
+			return new ResolutionExpression<TSource, TValueResolver>(_propertyMap);
+		}
+
+		public IResolverConfigurationExpression<TSource> ResolveUsing(Type valueResolverType)
+		{
+			var resolver = new DeferredInstantiatedResolver(BuildCtor<IValueResolver>(valueResolverType));
+
+			ResolveUsing(resolver);
+
+			return new ResolutionExpression<TSource>(_propertyMap);
+		}
+
+		public IResolutionExpression<TSource> ResolveUsing(IValueResolver valueResolver)
+		{
+			_propertyMap.AssignCustomValueResolver(valueResolver);
+
+			return new ResolutionExpression<TSource>(_propertyMap);
+		}
+
+>>>>>>> e35550df7a4658b658c1b8fe9116977efbcd0874
 		public void ResolveUsing(Func<TSource, object> resolver)
 		{
 			_propertyMap.AssignCustomValueResolver(new DelegateBasedResolver<TSource>(resolver));
@@ -210,11 +353,7 @@ namespace AutoMapper
 
 		public void MapFrom<TMember>(Expression<Func<TSource, TMember>> sourceMember)
 		{
-            if (sourceMember.Body is MemberExpression)
-            {
-                _propertyMap.SourceMember = (sourceMember.Body as MemberExpression).Member;
-            }
-            _propertyMap.AssignCustomValueResolver(new DelegateBasedResolver<TSource, TMember>(sourceMember.Compile()));
+            _propertyMap.SetCustomValueResolverExpression(sourceMember);
 		}
 
 		public void UseValue<TValue>(TValue value)
@@ -233,12 +372,89 @@ namespace AutoMapper
 	    }
 
         public IMappingExpression<TSource, TDestination> MaxDepth(int depth)
+<<<<<<< HEAD
+=======
         {
             _typeMap.SetCondition(o => PassesDepthCheck(o, depth));
             return this;
         }
 
+	    public IMappingExpression<TSource, TDestination> ConstructUsingServiceLocator()
+	    {
+	        _typeMap.ConstructDestinationUsingServiceLocator = true;
+
+	        return this;
+	    }
+
+	    private static bool PassesDepthCheck(ResolutionContext context, int maxDepth)
+        {
+            if (context.InstanceCache.ContainsKey(context))
+            {
+                // return true if we already mapped this value and it's in the cache
+                return true;
+            }
+
+            ResolutionContext contextCopy = context;
+
+            int currentDepth = 1;
+
+            // walk parents to determine current depth
+            while (contextCopy.Parent != null)
+            {
+                if (contextCopy.SourceType == context.TypeMap.SourceType &&
+                    contextCopy.DestinationType == context.TypeMap.DestinationType)
+                {
+                    // same source and destination types appear higher up in the hierarchy
+                    currentDepth++;
+                }
+                contextCopy = contextCopy.Parent;
+            }
+            return currentDepth <= maxDepth;
+        }
+
+	    public void Condition(Func<ResolutionContext, bool> condition)
+>>>>>>> e35550df7a4658b658c1b8fe9116977efbcd0874
+        {
+            _typeMap.SetCondition(o => PassesDepthCheck(o, depth));
+            return this;
+        }
+
+<<<<<<< HEAD
         private static bool PassesDepthCheck(ResolutionContext context, int maxDepth)
+=======
+	    public void Ignore()
+		{
+			_propertyMap.Ignore();
+		}
+
+		public void UseDestinationValue()
+		{
+			_propertyMap.UseDestinationValue = true;
+		}
+
+		public void SetMappingOrder(int mappingOrder)
+		{
+			_propertyMap.SetMappingOrder(mappingOrder);
+		}
+
+		public void ConstructFormatterBy(Type formatterType, Func<IValueFormatter> instantiator)
+		{
+			_propertyMap.RemoveLastFormatter();
+			_propertyMap.AddFormatter(new DeferredInstantiatedFormatter(ctxt => instantiator()));
+		}
+
+		public void ConvertUsing(Func<TSource, TDestination> mappingFunction)
+		{
+			_typeMap.UseCustomMapper(source => mappingFunction((TSource)source.SourceValue));
+		}
+
+		public void ConvertUsing(Func<ResolutionContext, TDestination> mappingFunction)
+		{
+			_typeMap.UseCustomMapper(context => mappingFunction(context));
+		}
+
+        public void ConvertUsing(Func<ResolutionContext, TSource, TDestination> mappingFunction)
+>>>>>>> e35550df7a4658b658c1b8fe9116977efbcd0874
         {
             if (context.InstanceCache.ContainsKey(context))
             {
@@ -366,3 +582,30 @@ namespace AutoMapper
 	}
 }
 
+<<<<<<< HEAD
+=======
+			memberOptions(this);
+		}
+
+        public void As<T>()
+        {
+            _typeMap.DestinationTypeOverride = typeof(T);
+        }
+
+        private Func<ResolutionContext, TServiceType> BuildCtor<TServiceType>(Type type)
+        {
+            return context =>
+            {
+                if (context.Options.ServiceCtor != null)
+                {
+                    var obj = context.Options.ServiceCtor(type);
+                    if (obj != null)
+                        return (TServiceType)obj;
+                }
+                return (TServiceType)_serviceCtor(type);
+            };
+        }
+	}
+}
+
+>>>>>>> e35550df7a4658b658c1b8fe9116977efbcd0874

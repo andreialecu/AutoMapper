@@ -9,6 +9,7 @@ namespace AutoMapper
         void ConvertUsing(Type typeConverterType);
         IMappingExpression WithProfile(string profileName);
         IMappingExpression ForMember(string name, Action<IMemberConfigurationExpression> memberOptions);
+<<<<<<< HEAD
     }
 
     public interface IMappingExpression<TSource, TDestination>
@@ -32,6 +33,32 @@ namespace AutoMapper
         IMappingExpression<TSource, TDestination> MaxDepth(int depth);
     }
 
+=======
+    }
+
+    public interface IMappingExpression<TSource, TDestination>
+    {
+        IMappingExpression<TSource, TDestination> ForMember(Expression<Func<TDestination, object>> destinationMember, Action<IMemberConfigurationExpression<TSource>> memberOptions);
+        IMappingExpression<TSource, TDestination> ForMember(string name, Action<IMemberConfigurationExpression<TSource>> memberOptions);
+        void ForAllMembers(Action<IMemberConfigurationExpression<TSource>> memberOptions);
+        IMappingExpression<TSource, TDestination> Include<TOtherSource, TOtherDestination>()
+            where TOtherSource : TSource
+            where TOtherDestination : TDestination;
+        IMappingExpression<TSource, TDestination> WithProfile(string profileName);
+        void ConvertUsing(Func<TSource, TDestination> mappingFunction);
+        void ConvertUsing(ITypeConverter<TSource, TDestination> converter);
+        void ConvertUsing<TTypeConverter>() where TTypeConverter : ITypeConverter<TSource, TDestination>;
+        IMappingExpression<TSource, TDestination> BeforeMap(Action<TSource, TDestination> beforeFunction);
+        IMappingExpression<TSource, TDestination> BeforeMap<TMappingAction>() where TMappingAction : IMappingAction<TSource, TDestination>;
+        IMappingExpression<TSource, TDestination> AfterMap(Action<TSource, TDestination> afterFunction);
+        IMappingExpression<TSource, TDestination> AfterMap<TMappingAction>() where TMappingAction : IMappingAction<TSource, TDestination>;
+        IMappingExpression<TSource, TDestination> ConstructUsing(Func<TSource, TDestination> ctor);
+        void As<T>();
+        IMappingExpression<TSource, TDestination> MaxDepth(int depth);
+        IMappingExpression<TSource, TDestination> ConstructUsingServiceLocator();
+    }
+
+>>>>>>> e35550df7a4658b658c1b8fe9116977efbcd0874
     public interface IMemberConfigurationExpression
     {
         void MapFrom(string sourceMember);
@@ -81,6 +108,7 @@ namespace AutoMapper
         where TValueResolver : IValueResolver
     {
         IResolverConfigurationExpression<TSource, TValueResolver> FromMember(Expression<Func<TSource, object>> sourceMember);
+<<<<<<< HEAD
         IResolverConfigurationExpression<TSource, TValueResolver> FromMember(string sourcePropertyName);
         IResolverConfigurationExpression<TSource, TValueResolver> ConstructedBy(Func<TValueResolver> constructor);
     }
@@ -90,3 +118,14 @@ namespace AutoMapper
         IResolutionExpression<TSource> ConstructedBy(Func<IValueResolver> constructor);
     }
 }
+=======
+        IResolverConfigurationExpression<TSource, TValueResolver> FromMember(string sourcePropertyName);
+        IResolverConfigurationExpression<TSource, TValueResolver> ConstructedBy(Func<TValueResolver> constructor);
+    }
+
+    public interface IResolverConfigurationExpression<TSource> : IResolutionExpression<TSource>
+    {
+        IResolutionExpression<TSource> ConstructedBy(Func<IValueResolver> constructor);
+    }
+}
+>>>>>>> e35550df7a4658b658c1b8fe9116977efbcd0874
